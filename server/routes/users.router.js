@@ -27,12 +27,13 @@ router.addHandler('/register', 'POST', async (request, response) => {
     const db = client.db(dbName);
 
     try {
+        const col = db.collection('users');
         // Look for an existing user with that name
         const foundUser = await col.findOne({ username: user.username });
         if ( !foundUser ) {
             // Hash and salt the password
             user.password = await argon2.hash(user.password);
-            await db.collection('users').insertOne(user);
+            await col.insertOne(user);
             response.send({ message: 'success', success: true }, 200);
         } else {
             response.send({ message: 'user already exists', success: false }, 200);
