@@ -11,6 +11,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "argon2": "^0.21.0",
+    "jwt-simple": "^0.5.5",
+    "mongodb": "^3.2.2",
     "nanobe": "^0.1.2"
   }
 }
