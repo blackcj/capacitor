@@ -2,6 +2,7 @@ const Router = require('nanobe').Router;
 const router = new Router();
 const argon2 = require('argon2');
 const dbName = 'capacitor';
+const client = require('../modules/database');
 
 router.addHandler('/login', 'POST', async (request, response) => {
     const username = request.body.username;
