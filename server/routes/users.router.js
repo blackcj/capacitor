@@ -5,50 +5,7 @@ const dbName = 'capacitor';
 const client = require('../modules/database');
 const USER_ROLE = 1;
 const ADMIN_ROLE = 2;
-const crypto = require('crypto');
-const jwt = require('jwt-simple');
-const secret = process.env.JWT_SECRET;
-
-function generateToken(user) {
-    const token = crypto.randomBytes(64).toString('hex');
-    const expires = new Date();
-    expires.setMinutes(expires.getMinutes() + 30);
-    const payload = { token, expires, user: user._id };
-    return payload;
-}
-
-async function parseJwt(request) {
-    let result = { isAuthenticated: false };
-    try {
-        const encoded = request.headers.authorization.split(' ')[1];
-        const decoded = jwt.decode(encoded, secret);
-        const db = client.db(dbName);
-        const tokenCollection = db.collection('tokens');
-        const foundToken = await tokenCollection.findOne({ token: decoded.token });
-        if (foundToken && foundToken.expires > new Date()) {
-            // Make sure the user exists
-            const userCollection = db.collection('users');
-            const foundUser = await userCollection.findOne({ _id: (foundToken.user) });
-            if (!foundUser) {
-               throw 'Could not find user' 
-            }
-            
-            // Update token expiration
-            const expires = new Date();
-            expires.setMinutes(expires.getMinutes() + 30);
-            await tokenCollection.updateOne({ token: decoded.token }, { $set: { expires } });
-            delete foundUser.password;
-            result = {
-                isAuthenticated: true,
-                user: foundUser
-            };
-        }
-    } catch (err) {
-        console.log('CATCH', err);
-        result = { isAuthenticated: false };
-    }
-    return result;
-}
+const userJwt = require('../modules/user.jwt');
 
 router.addHandler('/login', 'POST', (request, response) => {
     (async () => {
@@ -60,16 +17,16 @@ router.addHandler('/login', 'POST', (request, response) => {
             const tokenCollection = db.collection('tokens');
             const user = await userCollection.findOne({ username });
             if (user && await argon2.verify(user.password, password)) {
-                const payload = generateToken(user);
-                tokenCollection.insertOne(payload);
+                const payload = userJwt.generateToken(user);
                 const encoded = jwt.encode(payload, secret);
+                await tokenCollection.insertOne(payload);
                 response.send({ message: 'success', encoded, success: true }, 200);
             } else {
                 response.send({ message: 'forbidden', success: false }, 200);
             }
-        } catch (error) {
-            console.log(error);
-            response.send({ message: 'error', success: false }, 200);
+        } catch (e) {
+            console.log(e);
+            throw e;
         }
     })().catch((error) => {
         console.log('CATCH', error);
@@ -79,7 +36,7 @@ router.addHandler('/login', 'POST', (request, response) => {
 
 router.addHandler('/', 'GET', (request, response) => {
     (async () => {
-        const user = await parseJwt(request);
+        const user = await userJwt.parseJwt(request);
         if(user.isAuthenticated) {
             response.send({ message: 'success', user: user.user, success: true }, 200);
         } else {
@@ -88,9 +45,9 @@ router.addHandler('/', 'GET', (request, response) => {
     })()
 });
 
-router.addHandler('/codes', 'POST', async (request, response) => {
+router.addHandler('/codes', 'POST', (request, response) => {
     (async () => {
-        const user = await parseJwt(request);
+        const user = await userJwt.parseJwt(request);
         if (user.isAuthenticated) {
             const foundUser = user.user;
             const codes = request.body.codes;
@@ -103,8 +60,8 @@ router.addHandler('/codes', 'POST', async (request, response) => {
                 } else {
                     response.send({ message: 'forbidden', success: false }, 200);
                 }
-            } catch (error) {
-                console.log(error);
+            } catch (e) {
+                console.log(e);
                 throw e;
             }
         } else {
@@ -116,27 +73,32 @@ router.addHandler('/codes', 'POST', async (request, response) => {
     });
 });
 
-router.addHandler('/register', 'POST', async (request, response) => {
-    const user = request.body;
-    user.role = USER_ROLE;
-    const db = client.db(dbName);
-
-    try {
-        const col = db.collection('users');
-        // Look for an existing user with that name
-        const foundUser = await col.findOne({ username: user.username });
-        if ( !foundUser ) {
-            // Hash and salt the password
-            user.password = await argon2.hash(user.password);
-            await col.insertOne(user);
-            response.send({ message: 'success', success: true }, 200);
-        } else {
-            response.send({ message: 'user already exists', success: false }, 200);
+router.addHandler('/register', 'POST', (request, response) => {
+    (async () => {
+        const user = request.body;
+        // Add default role to the user
+        user.role = USER_ROLE;
+        try {
+            const db = client.db(dbName);
+            const col = db.collection('users');
+            // Look for an existing user with that username
+            const foundUser = await col.findOne({ username: user.username });
+            if ( !foundUser ) {
+                // Hash and salt the password
+                user.password = await argon2.hash(user.password);
+                await col.insertOne(user);
+                response.send({ message: 'success', success: true }, 200);
+            } else {
+                response.send({ message: 'user already exists', success: false }, 200);
+            }
+        } catch (error) {
+            console.log(error);
+            response.send({ message: 'error', success: false }, 200);
         }
-    } catch (error) {
-        console.log(error);
+    })().catch((error) => {
+        console.log('CATCH', error);
         response.send({ message: 'error', success: false }, 200);
-    }
+    });
 });
 
 module.exports = router;
