@@ -47,6 +47,7 @@ router.addHandler('/', 'POST', (request, response) => {
                     data.published_at = new Date(deviceData.published_at);
                     await deviceCollection.findOneAndUpdate(
                         { coreid: deviceData.coreid, user_id: foundUser._id },
+                        { $setOnInsert: { date_added: new Date() }},
                         { $push: { data } },
                         { upsert: true, },
                     );
@@ -104,7 +105,7 @@ router.addHandler('/', 'GET', (request, response) => {
                 const coreid = request.query.coreid;
                 const db = client.db(dbName);
                 const deviceCollection = db.collection('devices');
-                const device = await deviceCollection.findOne({ coreid, user_id: foundUser._id});
+                const device = await deviceCollection.findOne({ coreid, user_id: foundUser._id }, { data: { $slice: 20 } });
                 response.send({ message: 'success', device, success: true }, 200);
 
             } catch (e) {
@@ -153,7 +154,7 @@ router.addHandler('/list', 'GET', (request, response) => {
                 const foundUser = user.user;
                 const db = client.db(dbName);
                 const deviceCollection = db.collection('devices');
-                const deviceList = await deviceCollection.find({ user_id: foundUser._id }).toArray();
+                const deviceList = await deviceCollection.find({ user_id: foundUser._id }).project({ coreid: 1, date_added: 1 }).toArray();
                 response.send({ message: 'success', devices: deviceList, success: true }, 200);
 
             } catch (e) {
