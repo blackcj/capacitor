@@ -39,9 +39,11 @@ async function parseJwt(request) {
             }
 
             // Update token expiration
-            const expires = new Date();
-            expires.setMinutes(expires.getMinutes() + 30);
-            await tokenCollection.updateOne({ token: decoded.token }, { $set: { expires } });
+            if (foundToken.type == 1) {
+                const expires = new Date();
+                expires.setMinutes(expires.getMinutes() + 30);
+                await tokenCollection.updateOne({ token: decoded.token }, { $set: { expires } });
+            }
             delete foundUser.password;
             result = {
                 isAuthenticated: true,

@@ -201,7 +201,7 @@ router.addHandler('/token', 'GET', (request, response) => {
             try {
                 const db = client.db(dbName);
                 const tokenCollection = db.collection('tokens');
-                const payload = userJwt.generateDeviceToken(user);
+                const payload = userJwt.generateDeviceToken(user.user);
                 const encoded = jwt.encode(payload, secret);
                 await tokenCollection.insertOne(payload);
                 response.send({ message: 'success', encoded, success: true }, 200);
