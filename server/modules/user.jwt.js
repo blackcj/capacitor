@@ -17,7 +17,7 @@ function generateDeviceToken(user) {
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date();
     let lifespan = 5256000;
-    expires.setMinutes(expires.getMinutes() + lifespan);
+    expires.setFullYear(expires.getFullYear() + 10);
     const payload = { token, expires, user: user._id, lifespan, type: 2 };
     return payload;
 }
