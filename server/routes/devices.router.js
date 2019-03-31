@@ -46,7 +46,7 @@ router.addHandler('/', 'POST', (request, response) => {
                     data.event = deviceData.event;
                     data.published_at = new Date(deviceData.published_at);
                     await deviceCollection.findOneAndUpdate(
-                        { deviceID: deviceData.coreid, user_id: foundUser._id },
+                        { coreid: deviceData.coreid, user_id: foundUser._id },
                         { $push: { data } },
                         { upsert: true, },
                     );
@@ -61,6 +61,107 @@ router.addHandler('/', 'POST', (request, response) => {
             }
         } else {
             response.send({ message: 'bad token', success: false }, 200);
+        }
+    })().catch((error) => {
+        console.log('CATCH', error);
+        response.send({ message: 'error', success: false }, 200);
+    });
+});
+
+/**
+ * @api {get} /api/devices Get Device Data
+ * @apiDescription Get a token with a long life to use for web hooks.
+ * @apiName GetDeviceData
+ * @apiGroup Devices
+ *
+ * @apiHeader {String} Authorization Users encoded JWT token.
+ * @apiHeaderExample {json} Header-Example:
+ *     {
+ *       "Content-Type": "application/json",
+ *       "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+ *     }
+ * 
+ * @apiParam (200) {String}   coreid            Information about the device.
+ *
+ * @apiSuccess (200) {String}   message     Success message.
+ * @apiSuccess (200) {Boolean}  success     Success boolean.
+ * @apiSuccess (200) {Object}   data        Data for the specified device.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "message": "success",
+ *       "success": true,
+ *       "encoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+ *     }
+ */
+router.addHandler('/', 'GET', (request, response) => {
+    (async () => {
+        const user = await userJwt.parseJwt(request);
+        if (user.isAuthenticated) {
+            try {
+                const foundUser = user.user;
+                const coreid = request.query.coreid;
+                const db = client.db(dbName);
+                const deviceCollection = db.collection('devices');
+                const device = await deviceCollection.findOne({ coreid, user_id: foundUser._id});
+                response.send({ message: 'success', device, success: true }, 200);
+
+            } catch (e) {
+                console.log(e);
+                throw e;
+            }
+        } else {
+            response.send({ message: 'forbidden', success: false }, 200);
+        }
+    })().catch((error) => {
+        console.log('CATCH', error);
+        response.send({ message: 'error', success: false }, 200);
+    });
+});
+
+/**
+ * @api {get} /api/devices/list Get All Devices
+ * @apiDescription Get a list of devices for the user.
+ * @apiName GetDevices
+ * @apiGroup Devices
+ *
+ * @apiHeader {String} Authorization Users encoded JWT token.
+ * @apiHeaderExample {json} Header-Example:
+ *     {
+ *       "Content-Type": "application/json",
+ *       "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+ *     }
+ *
+ * @apiSuccess (200) {String}   message     Success message.
+ * @apiSuccess (200) {Boolean}  success     Success boolean.
+ * @apiSuccess (200) {Object}   data        Data for the specified device.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "message": "success",
+ *       "success": true,
+ *       "encoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+ *     }
+ */
+router.addHandler('/list', 'GET', (request, response) => {
+    (async () => {
+        const user = await userJwt.parseJwt(request);
+        if (user.isAuthenticated) {
+            try {
+                const foundUser = user.user;
+                const db = client.db(dbName);
+                const deviceCollection = db.collection('devices');
+                const deviceList = await deviceCollection.find({ user_id: foundUser._id }).toArray();
+                response.send({ message: 'success', devices: deviceList, success: true }, 200);
+
+            } catch (e) {
+                console.log(e);
+                throw e;
+            }
+        } else {
+            response.send({ message: 'forbidden', success: false }, 200);
         }
     })().catch((error) => {
         console.log('CATCH', error);
