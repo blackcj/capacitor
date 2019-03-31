@@ -1,4 +1,5 @@
 const Router = require('nanobe').Router;
+const { ObjectId } = require('mongodb');
 const router = new Router();
 const argon2 = require('argon2');
 const dbName = 'capacitor';
@@ -6,7 +7,43 @@ const client = require('../modules/database');
 const USER_ROLE = 1;
 const ADMIN_ROLE = 2;
 const userJwt = require('../modules/user.jwt');
+const jwt = require('jwt-simple');
+const secret = process.env.JWT_SECRET;
 
+/**
+ * @apiDefine UserNotFoundError
+ *
+ * @apiError (Error) UserNotFound The id of the User was not found.
+ *
+ * @apiErrorExample Error-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "message": "User not found.",
+ *       "success": false,
+ *     }
+ */
+
+/**
+ * @api {post} /api/users/login User Login
+ * @apiDescription Login user and receive a JWT on successful login. Params should be passed in the requrest body.
+ * @apiName Login
+ * @apiGroup Users
+ *
+ * @apiParam {String} username User e-mail address.
+ * @apiParam {String} password User password.
+ *
+ * @apiSuccess (200) {String}   message     Success message.
+ * @apiSuccess (200) {Boolean}  success     Success boolean.
+ * @apiSuccess (200) {String}   encoded     Encoded JWT token used for authorizing future requests.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "message": "success",
+ *       "success": true,
+ *       "encoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+ *     }
+ */
 router.addHandler('/login', 'POST', (request, response) => {
     (async () => {
         const username = request.body.username;
@@ -34,6 +71,39 @@ router.addHandler('/login', 'POST', (request, response) => {
     });
 });
 
+/**
+ * @api {get} /api/users Get User details
+ * @apiDescription Gets the details for the user associated with the JWT.
+ * @apiName GetUser
+ * @apiGroup Users
+ * 
+ * @apiHeader {String} Authorization Users encoded JWT token.
+ * @apiHeaderExample {json} Header-Example:
+ *     {
+ *       "Content-Type": "application/json",
+ *       "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+ *     }
+ *
+ * @apiSuccess (200) {String}   message         Success message.
+ * @apiSuccess (200) {Boolean}  success         Success boolean.
+ * @apiSuccess (200) {Object}   user            User object.
+ * @apiSuccess (200) {String}   user.username   User e-mail.
+ * @apiSuccess (200) {String}   user.role       User role.
+ *
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "message": "success",
+ *       "success": true,
+ *       "user": {
+ *         "_id": "5c9fc1979b6e69d3177c00a9",
+ *         "username": "chris",
+ *         "role": 1
+ *       }
+ *     }
+ * 
+ * @apiUse UserNotFoundError
+ */
 router.addHandler('/', 'GET', (request, response) => {
     (async () => {
         const user = await userJwt.parseJwt(request);
@@ -42,20 +112,50 @@ router.addHandler('/', 'GET', (request, response) => {
         } else {
             response.send({ message: 'bad token', success: false }, 200);
         }
-    })()
+    })().catch((error) => {
+        console.log('CATCH', error);
+        response.send({ message: 'error', success: false }, 200);
+    });
 });
 
-router.addHandler('/codes', 'POST', (request, response) => {
+/**
+ * @api {delete} /api/users Delete a User
+ * @apiDescription Deletes the user with a matching id. Params should be passed as query parameters in the URL.
+ * @apiName DeleteUser
+ * @apiGroup Users
+ * 
+ * @apiParam {String} id Users unique ID.
+ *
+ * @apiHeader {String} Authorization Users encoded JWT token.
+ * @apiHeaderExample {json} Header-Example:
+ *     {
+ *       "Content-Type": "application/json",
+ *       "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+ *     }
+ *
+ * @apiSuccess (200) {String}   message         Success message.
+ * @apiSuccess (200) {Boolean}  success         Success boolean.
+ *
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "message": "success",
+ *       "success": true
+ *     }
+ * 
+ * @apiUse UserNotFoundError
+ */
+router.addHandler('/', 'DELETE', (request, response) => {
     (async () => {
         const user = await userJwt.parseJwt(request);
         if (user.isAuthenticated) {
             const foundUser = user.user;
-            const codes = request.body.codes;
             try {
+                const userToDelete = request.query.id;
                 const db = client.db(dbName);
-                if (foundUser.role == ADMIN_ROLE) {
-                    const codeCollection = db.collection('codes');
-                    await codeCollection.insertMany(codes);
+                if (foundUser.role == ADMIN_ROLE || String(foundUser._id) === userToDelete) {
+                    const userCollection = db.collection('users');
+                    await userCollection.findOneAndDelete({ _id: ObjectId(userToDelete) });
                     response.send({ message: 'success', success: true }, 200);
                 } else {
                     response.send({ message: 'forbidden', success: false }, 200);
@@ -73,6 +173,26 @@ router.addHandler('/codes', 'POST', (request, response) => {
     });
 });
 
+/**
+ * @api {post} /api/users/register Create new User
+ * @apiDescription Create a new user.
+ * @apiName Register
+ * @apiGroup Users
+ *
+ * @apiParam {String} username User e-mail address.
+ * @apiParam {String} password User password.
+ * @apiParam {String} code Invitation code.
+ *
+ * @apiSuccess (200) {String}   message     Success message.
+ * @apiSuccess (200) {Boolean}  success     Success boolean.
+ *
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "message": "success",
+ *       "success": true
+ *     }
+ */
 router.addHandler('/register', 'POST', (request, response) => {
     (async () => {
         const user = request.body;
@@ -80,24 +200,33 @@ router.addHandler('/register', 'POST', (request, response) => {
         user.role = USER_ROLE;
         try {
             const db = client.db(dbName);
-            const col = db.collection('users');
+            const userCollection = db.collection('users');
+
             // Look for an existing user with that username
-            const foundUser = await col.findOne({ username: user.username });
+            const foundUser = await userCollection.findOne({ username: user.username });
             if ( !foundUser ) {
-                // Hash and salt the password
-                user.password = await argon2.hash(user.password);
-                await col.insertOne(user);
-                response.send({ message: 'success', success: true }, 200);
+                const codeCollection = db.collection('codes');
+                const foundCode = await codeCollection.findOne({ code: user.code });
+                if ( foundCode && foundCode.slots > 0) {
+                    const slots = foundCode.slots - 1;
+                    await codeCollection.updateOne({ code: user.code }, { $set: { slots: slots } });
+                    // Hash and salt the password
+                    user.password = await argon2.hash(user.password);
+                    await userCollection.insertOne(user);
+                    response.send({ message: 'success', success: true }, 200);
+                } else {
+                    response.send({ message: 'The code you entered has expired.', success: false }, 200);
+                }
             } else {
-                response.send({ message: 'user already exists', success: false }, 200);
+                response.send({ message: 'A user already exists with that e-mail.', success: false }, 200);
             }
         } catch (error) {
             console.log(error);
-            response.send({ message: 'error', success: false }, 200);
+            response.send({ message: 'Unable to register user.', success: false }, 200);
         }
     })().catch((error) => {
         console.log('CATCH', error);
-        response.send({ message: 'error', success: false }, 200);
+        response.send({ message: 'Unable to register user.', success: false }, 200);
     });
 });
 

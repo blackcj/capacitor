@@ -7,8 +7,9 @@ const secret = process.env.JWT_SECRET;
 function generateToken(user) {
     const token = crypto.randomBytes(64).toString('hex');
     const expires = new Date();
-    expires.setMinutes(expires.getMinutes() + 30);
-    const payload = { token, expires, user: user._id };
+    let lifespan = 60;
+    expires.setMinutes(expires.getMinutes() + lifespan);
+    const payload = { token, expires, user: user._id, lifespan };
     return payload;
 }
 
@@ -23,7 +24,7 @@ async function parseJwt(request) {
         if (foundToken && foundToken.expires > new Date()) {
             // Make sure the user exists
             const userCollection = db.collection('users');
-            const foundUser = await userCollection.findOne({ _id: (foundToken.user) });
+            const foundUser = await userCollection.findOne({ _id: foundToken.user });
             if (!foundUser) {
                 throw 'Could not find user'
             }
