@@ -120,6 +120,7 @@ router.addHandler('/', 'GET', (request, response) => {
                             newRoot: "$data",
                         },
                     },
+                    { $sort: { published_at: -1 }},
                     { $limit: 20 }]).toArray();
                 response.send({ message: 'success', coreid, data, success: true }, 200);
 
