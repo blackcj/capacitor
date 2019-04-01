@@ -47,7 +47,6 @@ router.addHandler('/', 'POST', (request, response) => {
                     data.published_at = new Date(deviceData.published_at);
                     await deviceCollection.findOneAndUpdate(
                         { coreid: deviceData.coreid, user_id: foundUser._id },
-                        { $setOnInsert: { date_added: new Date() }},
                         { $push: { data } },
                         { upsert: true, },
                     );
@@ -105,8 +104,24 @@ router.addHandler('/', 'GET', (request, response) => {
                 const coreid = request.query.coreid;
                 const db = client.db(dbName);
                 const deviceCollection = db.collection('devices');
-                const device = await deviceCollection.findOne({ coreid, user_id: foundUser._id }, { data: { $slice: 20 } });
-                response.send({ message: 'success', device, success: true }, 200);
+                
+                const data = await deviceCollection.aggregate([
+                    {
+                        $match: {
+                            $and: [
+                                { coreid: coreid },
+                                { user_id: foundUser._id },
+                            ], 
+                        }
+                    },
+                    { $unwind: "$data" }, 
+                    {
+                        $replaceRoot: {
+                            newRoot: "$data",
+                        },
+                    },
+                    { $limit: 20 }]).toArray();
+                response.send({ message: 'success', coreid, data, success: true }, 200);
 
             } catch (e) {
                 console.log(e);
@@ -154,7 +169,20 @@ router.addHandler('/list', 'GET', (request, response) => {
                 const foundUser = user.user;
                 const db = client.db(dbName);
                 const deviceCollection = db.collection('devices');
-                const deviceList = await deviceCollection.find({ user_id: foundUser._id }).project({ coreid: 1, date_added: 1 }).toArray();
+                const deviceList = await deviceCollection.aggregate(
+                    [
+                        {
+                            "$match": {
+                                user_id: foundUser._id,
+                            }
+                        },
+                        {
+                            "$project": { 
+                                coreid: 1, 
+                                data_size: { $size: "$data" }, 
+                            }
+                        }
+                    ]).toArray();
                 response.send({ message: 'success', devices: deviceList, success: true }, 200);
 
             } catch (e) {
