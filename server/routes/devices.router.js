@@ -37,6 +37,7 @@ router.addHandler('/', 'POST', (request, response) => {
         if (user.isAuthenticated) {
             const foundUser = user.user;
             const deviceData = request.body;
+            // TODO: Check size of payload. Payload size should be a reasonable size. 
             try {
                 const db = client.db(dbName);
                 if (foundUser.role == ADMIN_ROLE) {
@@ -97,6 +98,10 @@ router.addHandler('/', 'POST', (request, response) => {
  */
 router.addHandler('/', 'GET', (request, response) => {
     (async () => {
+        if (!request.query.coreid) {
+            response.send({ message: 'Missing coreid.', success: false }, 200);
+            return;
+        }
         const user = await userJwt.parseJwt(request);
         if (user.isAuthenticated) {
             try {

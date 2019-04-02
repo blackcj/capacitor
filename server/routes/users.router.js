@@ -48,6 +48,10 @@ router.addHandler('/login', 'POST', (request, response) => {
     (async () => {
         const username = request.body.username;
         const password = request.body.password;
+        if(!username || !password) {
+            response.send({ message: 'You must supply a username and password.', success: false }, 200);
+            return;
+        }
         try {
             const db = client.db(dbName);
             const userCollection = db.collection('users');
@@ -110,7 +114,7 @@ router.addHandler('/', 'GET', (request, response) => {
         if(user.isAuthenticated) {
             response.send({ message: 'success', user: user.user, success: true }, 200);
         } else {
-            response.send({ message: 'bad token', success: false }, 200);
+            response.send({ message: 'Unable to get user, please try logging in again.', success: false }, 200);
         }
     })().catch((error) => {
         console.log('CATCH', error);
@@ -153,6 +157,7 @@ router.addHandler('/', 'DELETE', (request, response) => {
             try {
                 const userToDelete = request.query.id;
                 const db = client.db(dbName);
+                // Admins can delete any user, regular users can only delete themselves.
                 if (foundUser.role == ADMIN_ROLE || String(foundUser._id) === userToDelete) {
                     const userCollection = db.collection('users');
                     await userCollection.findOneAndDelete({ _id: ObjectId(userToDelete) });
@@ -196,6 +201,17 @@ router.addHandler('/', 'DELETE', (request, response) => {
 router.addHandler('/register', 'POST', (request, response) => {
     (async () => {
         const user = request.body;
+        // Fail fast if required parameters aren't supplied.
+        if( !user.code || !user.username || !user.password) {
+            response.send({ message: 'Unable to register user.', success: false }, 200);
+            return;
+        } else if( user.password.length < 8 ) {
+            response.send({ message: 'Your password isn\'t long enough. It must be at least 8 characters.', success: false }, 200);
+            return;
+        } else if ( !validateEmail(user.username) ) {
+            response.send({ message: 'Invalid e-mail, please try again.', success: false }, 200);
+            return;
+        }
         // Add default role to the user
         user.role = USER_ROLE;
         try {
@@ -208,12 +224,14 @@ router.addHandler('/register', 'POST', (request, response) => {
                 const codeCollection = db.collection('codes');
                 const foundCode = await codeCollection.findOne({ code: user.code });
                 if ( foundCode && foundCode.slots > 0) {
+                    // Each code has a limited number of uses, subtract one use from the code
                     const slots = foundCode.slots - 1;
                     await codeCollection.updateOne({ code: user.code }, { $set: { slots: slots } });
                     // Hash and salt the password
                     user.password = await argon2.hash(user.password);
+                    // Create the new user
                     await userCollection.insertOne(user);
-                    response.send({ message: 'success', success: true }, 200);
+                    response.send({ message: 'Success! Your account has been created.', success: true }, 200);
                 } else {
                     response.send({ message: 'The code you entered has expired.', success: false }, 200);
                 }
@@ -229,5 +247,10 @@ router.addHandler('/register', 'POST', (request, response) => {
         response.send({ message: 'Unable to register user.', success: false }, 200);
     });
 });
+
+function validateEmail(email) {
+    var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
+}
 
 module.exports = router;
