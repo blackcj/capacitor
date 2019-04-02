@@ -120,6 +120,11 @@ router.addHandler('/', 'GET', (request, response) => {
                         }
                     },
                     { $unwind: "$data" }, 
+                    // {
+                    //     $addFields: { 
+                    //         "data.coreid": "$coreid",
+                    //     }
+                    // },
                     {
                         $replaceRoot: {
                             newRoot: "$data",
@@ -127,8 +132,12 @@ router.addHandler('/', 'GET', (request, response) => {
                     },
                     { $sort: { published_at: -1 }},
                     { $limit: 20 }]).toArray();
-                response.send({ message: 'success', coreid, data, success: true }, 200);
 
+                if (data.length > 0) {
+                    response.send({ message: 'success', coreid, data, success: true }, 200);
+                } else {
+                    response.send({ message: 'No data found for supplied coreid.', success: false }, 200);
+                }
             } catch (e) {
                 console.log(e);
                 throw e;
@@ -234,6 +243,7 @@ router.addHandler('/token', 'GET', (request, response) => {
         const user = await userJwt.parseJwt(request);
         if (user.isAuthenticated) {
             try {
+                // TODO: Only allow one 'forever' token per user. Adding a new one should expire the old.
                 const db = client.db(dbName);
                 const tokenCollection = db.collection('tokens');
                 const payload = userJwt.generateDeviceToken(user.user);
