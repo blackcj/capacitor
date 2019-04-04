@@ -9,8 +9,8 @@ Short term storage and visualization of IoT data.
 JWT_TOKEN=A_RANDOM_TOKEN
 ```
 
-`npm install`
-`npm start`
+- `npm install`
+- `npm start`
 
 ## API Documentation
 
