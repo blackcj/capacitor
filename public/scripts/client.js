@@ -6,7 +6,7 @@ axios.get('/api/entries/sample').then( response => {
     const data1 = [];
     let i = 1;
     for(const entry of entries) {
-        data1.push({ t: entry.published_at, y:entry.temp});
+        data1.push({ t: entry.published_at, y:entry.voc});
         i += 1;
     }
     console.log(data1);
@@ -14,7 +14,7 @@ axios.get('/api/entries/sample').then( response => {
         type: 'line',
         data: {
             datasets: [{
-                label: 'Temperature',
+                label: 'VOC Levels',
                 data: data1,
                 backgroundColor: 'lightblue'
             }]
