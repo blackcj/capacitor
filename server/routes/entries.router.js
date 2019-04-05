@@ -61,7 +61,7 @@ router.addHandler('/', 'POST', (request, response) => {
 
 /**
  * @api {get} /api/entries Get Device Data
- * @apiDescription Get a token with a long life to use for web hooks.
+ * @apiDescription Get data for a specific device.
  * @apiName GetEntries
  * @apiGroup Entries
  *
@@ -124,6 +124,68 @@ router.addHandler('/', 'GET', (request, response) => {
         } else {
             response.send({ message: 'forbidden', success: false }, 200);
         }
+    })().catch((error) => {
+        console.log('CATCH', error);
+        response.send({ message: 'error', success: false }, 200);
+    });
+});
+
+/**
+ * @api {get} /api/entries/sample Get Sample Data
+ * @apiDescription Get sample entries for demo purposes.
+ * @apiName GetSampleEntries
+ * @apiGroup Entries
+ *
+ * @apiSuccess (200) {String}   message     Success message.
+ * @apiSuccess (200) {Boolean}  success     Success boolean.
+ * @apiSuccess (200) {Array}    data        Data for the specified device.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "message": "success",
+ *       "success": true,
+ *       "data": []
+ *     }
+ */
+router.addHandler('/sample', 'GET', (request, response) => {
+    (async () => {
+        try {
+            const coreid = process.env.SAMPLE_CORE_ID;
+            const db = client.db(dbName);
+            const entryCollection = db.collection('entries');
+
+            const entries = await entryCollection.aggregate([
+                {
+                    $match: {
+                        $and: [
+                            { coreid: coreid },
+                        ],
+                    }
+                },
+                {
+                    $addFields: {
+                        "data.published_at": "$published_at",
+                    }
+                },
+                {
+                    $replaceRoot: {
+                        newRoot: "$data"
+                    }
+                },
+                { $sort: { published_at: -1 } },
+                { $limit: 60 }]).toArray();
+
+            if (entries.length > 0) {
+                response.send({ message: 'success', entries, success: true }, 200);
+            } else {
+                response.send({ message: 'No entries found for supplied coreid.', success: false }, 200);
+            }
+        } catch (e) {
+            console.log(e);
+            throw e;
+        }
+
     })().catch((error) => {
         console.log('CATCH', error);
         response.send({ message: 'error', success: false }, 200);

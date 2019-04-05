@@ -7,16 +7,21 @@
     <title>Capacitor</title>
     <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:100,300|Roboto:100,300" rel="stylesheet">
     <link rel="stylesheet" href="styles/styles.css">
+    
 </head>
 <body>
     <header>
         <h1>capacitor.dev</h1>
-        <h2>Short term data storage for IoT devices.</h2>
+        <h2>Data storage, real time graphs, and custom notifications for your IoT projects.</h2>
         <br />
-        <br />
-        <br />
-        <h3>coming soon...</h3>
+        <br />  
     </header>
-
+    <div class="container">
+        <canvas id="sample-chart"></canvas>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="scripts/client.js"></script>
 </body>
 </html>

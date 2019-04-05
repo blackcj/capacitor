@@ -14,7 +14,7 @@ h1 {
     font-family: 'Roboto Mono', monospace;
     font-weight: 100;
     margin: 20px;
-    font-size: 2.8em;
+    font-size: 3em;
 }
 
 h2 {
@@ -27,4 +27,9 @@ h3 {
     font-family: 'Roboto Mono', monospace;
     font-weight: 300;
     font-size: 1.8em;
+}
+
+.container {
+    max-width: 780px;
+    margin: 0 auto;
 }
