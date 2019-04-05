@@ -212,8 +212,7 @@ router.addHandler('/register', 'POST', (request, response) => {
             response.send({ message: 'Invalid e-mail, please try again.', success: false }, 200);
             return;
         }
-        // Add default role to the user
-        user.role = USER_ROLE;
+
         try {
             const db = client.db(dbName);
             const userCollection = db.collection('users');
@@ -229,6 +228,10 @@ router.addHandler('/register', 'POST', (request, response) => {
                     await codeCollection.updateOne({ code: user.code }, { $set: { slots: slots } });
                     // Hash and salt the password
                     user.password = await argon2.hash(user.password);
+                    user.warning_level = 0;
+                    user.sign_up_date = new Date();
+                    // Add default role to the user
+                    user.role = USER_ROLE;
                     // Create the new user
                     await userCollection.insertOne(user);
                     response.send({ message: 'Success! Your account has been created.', success: true }, 200);
@@ -237,6 +240,75 @@ router.addHandler('/register', 'POST', (request, response) => {
                 }
             } else {
                 response.send({ message: 'A user already exists with that e-mail.', success: false }, 200);
+            }
+        } catch (error) {
+            console.log(error);
+            response.send({ message: 'Unable to register user.', success: false }, 200);
+        }
+    })().catch((error) => {
+        console.log('CATCH', error);
+        response.send({ message: 'Unable to register user.', success: false }, 200);
+    });
+});
+
+/**
+ * @api {post} /api/users/setup Setup first User
+ * @apiDescription Create the first user. This user will have admin permission.
+ * @apiName Setup
+ * @apiGroup Users
+ *
+ * @apiParam {String} username User e-mail address.
+ * @apiParam {String} password User password.
+ * @apiParam {String} code Admin code environment variable.
+ *
+ * @apiSuccess (200) {String}   message     Success message.
+ * @apiSuccess (200) {Boolean}  success     Success boolean.
+ *
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "message": "success",
+ *       "success": true
+ *     }
+ */
+router.addHandler('/setup', 'POST', (request, response) => {
+    (async () => {
+        const user = request.body;
+
+        // Fail fast if required parameters aren't supplied.
+        if (!user.code || !user.username || !user.password) {
+            response.send({ message: 'Unable to register user.', success: false }, 200);
+            return;
+        } else if (user.password.length < 8) {
+            response.send({ message: 'Your password isn\'t long enough. It must be at least 8 characters.', success: false }, 200);
+            return;
+        } else if (!validateEmail(user.username)) {
+            response.send({ message: 'Invalid e-mail, please try again.', success: false }, 200);
+            return;
+        }
+        
+        try {
+            const db = client.db(dbName);
+            const userCollection = db.collection('users');
+
+            // Look for an existing user
+            const userSearch = await userCollection.find({}).toArray();
+            if (userSearch.length === 0) {
+                if (process.env.ADMIN_CODE && user.code == process.env.ADMIN_CODE) {
+                    // Add default role to the user
+                    user.role = ADMIN_ROLE;
+                    user.warning_level = 0;
+                    user.sign_up_date = new Date();
+                    // Hash and salt the password
+                    user.password = await argon2.hash(user.password);
+                    // Create the new user
+                    await userCollection.insertOne(user);
+                    response.send({ message: 'Success! Your account has been created.', success: true }, 200);
+                } else {
+                    response.send({ message: 'Invalid code. Make sure you set a code in your .env.', success: false }, 200);
+                }
+            } else {
+                response.send({ message: 'A user already exists. This route is intended to be used only for an empty database.', success: false }, 200);
             }
         } catch (error) {
             console.log(error);

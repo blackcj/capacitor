@@ -6,11 +6,16 @@ Short term storage and visualization of IoT data.
 
 **.env**
 ```
-JWT_TOKEN=A_RANDOM_TOKEN
+JWT_TOKEN=YOUR_TOKEN
+ADMIN_CODE=FIRST_USER_CODE
 ```
 
 - `npm install`
 - `npm start`
+
+Use Postman or `curl` to call the `/api/users/setup` route. Pass it the code you entered in the `.env`, a username (email) and password. This will create the first user that you can use to authenticate and access the rest of the routes. You can remove this route after creating the admin user.
+
+**Front end coming soon!** Right now this project only includes server side code.
 
 ## API Documentation
 
