@@ -1,0 +1,30 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    background-color: #222;
+    font-family: 'Roboto', sans-serif;
+}
+
+header {
+    color: #eee;
+    text-align: center;
+}
+
+h1 {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 100;
+    margin: 20px;
+    font-size: 2.8em;
+}
+
+h2 {
+    margin: 0;
+    font-weight: 100;
+    font-size: 1.2em;
+}
+
+h3 {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 300;
+    font-size: 1.8em;
+}
