@@ -6,7 +6,7 @@ axios.get('/api/entries/sample').then( response => {
     const data1 = [];
     let i = 1;
     for(const entry of entries) {
-        data1.push({ t: entry.published_at, y:entry.data1});
+        data1.push({ t: entry.published_at, y:entry.temp});
         i += 1;
     }
     console.log(data1);
