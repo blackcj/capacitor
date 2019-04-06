@@ -155,7 +155,7 @@ router.addHandler('/sample', 'GET', (request, response) => {
             const db = client.db(dbName);
             const entryCollection = db.collection('entries');
 
-            const entries = await entryCollection.aggregate([
+            const allEntries = await entryCollection.aggregate([
                 {
                     $match: {
                         $and: [
@@ -174,9 +174,20 @@ router.addHandler('/sample', 'GET', (request, response) => {
                     }
                 },
                 { $sort: { published_at: -1 } },
-                { $limit: 60 }]).toArray();
+                { $limit: 1440 }]).toArray();
 
-            if (entries.length > 0) {
+            if (allEntries.length > 0) {
+                const entries = [];
+                const value = {voc: 0};
+                for(let entry of allEntries) {
+                    if(i % 30 === 0) {
+                        entries.push(value);
+                        value = {voc: 0};
+                    }
+                    if(entry.voc > value.voc) {
+                        value = entry;
+                    }
+                }
                 response.send({ message: 'success', entries, success: true }, 200);
             } else {
                 response.send({ message: 'No entries found for supplied coreid.', success: false }, 200);
