@@ -6,7 +6,7 @@ axios.get('/api/entries/sample').then( response => {
     const data1 = [];
     let i = 1;
     for(const entry of entries) {
-        data1.push({ t: entry.published_at, y:entry.voc});
+        data1.push({ t: new Date(entry.published_at), y:entry.voc});
         i += 1;
     }
     console.log(data1);
@@ -16,9 +16,21 @@ axios.get('/api/entries/sample').then( response => {
             datasets: [{
                 label: 'VOC Levels',
                 data: data1,
-                backgroundColor: 'lightblue'
+                borderColor: 'lightblue',
+                backgroundColor: 'lightblue',
+                fill: false,
             }]
         },
+        options: {
+            scales: {
+                xAxes: [{
+                    type: 'time',
+                    time: {
+                        unit: 'minute'
+                    }
+                }]
+            }
+        }
     })
 }).catch(error => {
     console.log(error);
