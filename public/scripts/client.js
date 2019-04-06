@@ -26,7 +26,8 @@ axios.get('/api/entries/sample').then( response => {
                 xAxes: [{
                     type: 'time',
                     time: {
-                        unit: 'minute'
+                        unit: 'minute',
+                        stepSize: 240
                     }
                 }]
             }
