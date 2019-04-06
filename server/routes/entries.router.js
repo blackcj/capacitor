@@ -178,7 +178,8 @@ router.addHandler('/sample', 'GET', (request, response) => {
 
             if (allEntries.length > 0) {
                 const entries = [];
-                const value = {voc: 0};
+                let value = {voc: 0};
+                let i = 0;
                 for(let entry of allEntries) {
                     if(i % 30 === 0) {
                         entries.push(value);
@@ -187,6 +188,7 @@ router.addHandler('/sample', 'GET', (request, response) => {
                     if(entry.voc > value.voc) {
                         value = entry;
                     }
+                    i += 1;
                 }
                 response.send({ message: 'success', entries, success: true }, 200);
             } else {
