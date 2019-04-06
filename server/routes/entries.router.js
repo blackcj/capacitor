@@ -181,12 +181,12 @@ router.addHandler('/sample', 'GET', (request, response) => {
                 let value = {voc: 0};
                 let i = 0;
                 for(let entry of allEntries) {
-                    if(i % 30 === 0) {
-                        entries.push(value);
-                        value = {voc: 0};
-                    }
                     if(entry.voc > value.voc) {
                         value = entry;
+                    }
+                    if(i % 30 === 0 && value.published_at) {
+                        entries.push(value);
+                        value = {voc: 0};
                     }
                     i += 1;
                 }
