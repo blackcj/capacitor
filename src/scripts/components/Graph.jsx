@@ -33,7 +33,7 @@ class Graph extends React.Component {
     }
 
     componentDidMount() {
-        axios.get('sample.json').then(response => {
+        axios.get('/api/entries/sample').then(response => {
             const entries = response.data.entries;
             const data1 = [];
             for (const entry of entries) {
