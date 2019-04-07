@@ -1,4 +1,10 @@
 require('dotenv').config();
+const browserRefreshClient = require('browser-refresh-client')
+
+browserRefreshClient.enableSpecialReload('**/public/**/*.*', { autoRefresh: false });
+browserRefreshClient.onFileModified(function (path) {
+    browserRefreshClient.refreshPage();
+});
 const PORT = process.env.PORT || 3000;
 const Nanobe = require('nanobe');
 const app = new Nanobe();
@@ -15,7 +21,10 @@ app.use('/api/devices', devicesRouter);
 app.use('/api/entries', entriesRouter);
 
 app.listen(PORT, () => {
-    console.log('listening on port', PORT);
+    console.log('listening on port', PORT, require('browser-refresh-client').isBrowserRefreshEnabled());
+    process.send && process.send('online'); // Process is a child process of browser-refresh
 });
+
+
 
 module.exports = app.server;
