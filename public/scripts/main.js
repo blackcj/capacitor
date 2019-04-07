@@ -50972,7 +50972,7 @@ function (_React$Component) {
     value: function componentDidMount() {
       var _this2 = this;
 
-      _axios["default"].get('sample.json').then(function (response) {
+      _axios["default"].get('/api/entries/sample').then(function (response) {
         var entries = response.data.entries;
         var data1 = [];
         var _iteratorNormalCompletion = true;
