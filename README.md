@@ -5,6 +5,8 @@ Short term storage and visualization of IoT data.
 ## Global Dependencies
 
 - Browserify `npm install browserify -g`
+- Watchify `npm install browserify -g`
+- Browser Refresh `npm install browser-refresh -g`
 - Mongo
 - Node.js
 
